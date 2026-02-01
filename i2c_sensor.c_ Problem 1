@@ -1,0 +1,102 @@
+#include <stdio.h>          // Standard input/output functions
+#include <fcntl.h>          // File control definitions
+#include <unistd.h>         // UNIX standard functions (read, write, close)
+#include <sys/ioctl.h>      // ioctl system call
+#include <linux/i2c-dev.h>  // I2C definitions for Linux
+#include <time.h>           // Time and date functions
+#include <string.h>         // String handling functions
+
+
+// I2C device file for Raspberry Pi
+
+#define I2C_DEV "/dev/i2c-1"
+#define SENSOR_ADDR 0x48
+
+#define REG_CONFIG 0x00
+#define REG_STATUS 0x01
+#define REG_DATA   0x02
+
+#define POLL_DELAY_US 500000
+
+int fd = -1;
+
+/* Timestamp logger */
+void log_msg(const char *msg) {
+    time_t now = time(NULL);
+    char tbuf[32];
+    strftime(tbuf, sizeof(tbuf), "%Y-%m-%d %H:%M:%S", localtime(&now));
+    printf("[%s] %s\n", tbuf, msg);
+}
+
+/* Initialize I2C */
+int init_i2c() {
+    fd = open(I2C_DEV, O_RDWR);
+    if (fd < 0) return -1;
+    if (ioctl(fd, I2C_SLAVE, SENSOR_ADDR) < 0) {
+        close(fd);
+        return -1;
+    }
+    return 0;
+}
+
+/* Configure sensor */
+int configure_sensor() {
+    unsigned char buf[2] = {REG_CONFIG, 0x01};
+    return (write(fd, buf, 2) == 2) ? 0 : -1;
+}
+
+/* Read 16-bit data */
+int read_sensor(int *value) {
+    unsigned char reg = REG_DATA;
+    unsigned char data[2];
+
+    // Select data register
+    if (write(fd, &reg, 1) != 1)
+        return -1;                               // I2C write error
+
+    // Read 2 bytes from sensor
+    if (read(fd, data, 2) != 2)
+        return -1;                               // I2C read error
+
+    // Combine MSB and LSB
+    *value = (data[0] << 8) | data[1];
+
+    // Check for invalid sensor data
+    if (*value < 0 || *value == 0xFFFF)
+        return -2;                               // Invalid data
+
+    return 0;                                   // Success
+
+}
+
+int main() {
+    int value;
+
+    while (1) {
+        if (fd < 0) {
+            log_msg("Initializing I2C...");
+            if (init_i2c() == 0 && configure_sensor() == 0)
+                log_msg("Sensor connected");
+            else {
+                log_msg("Sensor not detected");
+                sleep(1);
+                continue;
+            }
+        }
+      
+        // Read sensor data
+        int ret = read_sensor(&value);
+        if (ret == 0) {
+            char msg[64];
+            snprintf(msg, sizeof(msg), "Sensor Value = %d", value);
+            log_msg(msg);
+        } else {
+            log_msg("I2C error / sensor disconnected");
+            close(fd);
+            fd = -1;
+        }
+
+        usleep(POLL_DELAY_US);
+    }
+    return 0;
+}
