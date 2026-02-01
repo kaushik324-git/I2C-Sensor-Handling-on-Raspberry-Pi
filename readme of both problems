@@ -1,0 +1,54 @@
+# Embedded Engineer – Home Assignment
+
+This repository contains my solutions for the second-round home assignment shared by **Velastra Pvt. Ltd.** as part of the Embedded Engineer selection process.
+
+The assignment focuses on basic embedded concepts, Linux I2C communication, error handling, and data structure implementation using C.
+
+---
+
+## Problem 1: I2C Sensor Handling on Raspberry Pi
+
+### Description
+This program demonstrates communication with an I2C sensor using Raspberry Pi as the controller.  
+The application initializes the I2C bus, configures the sensor, and continuously polls sensor data at a fixed interval.
+
+Special care has been taken to handle common runtime issues such as I2C errors and sensor disconnection without stopping the application.
+
+### Features Implemented
+- I2C bus initialization using Linux `/dev/i2c-1`
+- Sensor configuration through register write
+- Polling sensor data every 500 ms
+- Detection and handling of:
+  - I2C communication failure
+  - Invalid sensor data
+  - Sensor disconnection during runtime
+- Timestamped logging of sensor values
+- Automatic recovery when the sensor reconnects
+
+### Build and Run
+```bash
+gcc i2c_sensor.c -o i2c_sensor
+sudo ./i2c_sensor
+
+
+
+## Problem 2: Stack Implementation Using Linked List
+
+### Description
+This program implements a stack using a linked list to store sensor error codes.  
+The implementation follows all the given constraints and avoids the use of recursion.
+
+The stack is designed to handle overflow by overwriting the oldest entry, ensuring that the most recent error codes are always available.
+
+### Features Implemented
+- Stack implemented using a linked list
+- Maximum stack size limited to 32 nodes
+- Push and Pop operations supported
+- No recursion used
+- Circular overwrite behavior on stack overflow
+- Suitable for storing recent sensor error codes
+
+### Build and Run
+```bash
+gcc stack.c -o stack
+./stack
